@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
 
 import 'dart:async';
@@ -34,6 +36,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  Map<String, DateTime> latestMsgTimes = HashMap();
   WebSocketChannel? uiChannel;
   WebSocketChannel? proxyChannel;
 
@@ -48,8 +51,9 @@ class _MyHomePageState extends State<MyHomePage> {
         .get(Uri.parse(
             "http://localhost:${localPortController.text}/rest/trackmap"))
         .then((response) => {
-          proxyChannel?.sink.add('{"topic": "TrackMap", "body": { "trackName": "$currentTrack", "trackMap": ${response.body} }}')
-        });
+              proxyChannel?.sink.add(
+                  '{"topic": "TrackMap", "body": { "trackName": "$currentTrack", "trackMap": ${response.body} }}')
+            });
   }
 
   void _connectToServices() {
@@ -86,8 +90,11 @@ class _MyHomePageState extends State<MyHomePage> {
       if (msgJson["topic"] == "SessionInfo") {
         currentTrack = message["body"]["trackName"] ?? "";
       }
-
       proxyChannel?.sink.add(message);
+
+      setState(() {
+        latestMsgTimes[msgJson["topic"]] = DateTime.now();
+      });
     });
     proxyChannel?.stream.listen((message) {
       switch (message) {
@@ -159,6 +166,12 @@ class _MyHomePageState extends State<MyHomePage> {
                   }
                 },
                 child: const Text('Connect'),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+              child: Text(
+                latestMsgTimes.map((key, value) => MapEntry(key, "$key -> ${value.toIso8601String()}")).values.join("\n")
               ),
             ),
           ],
